@@ -1,5 +1,6 @@
-import * as core from '@actions/core'
-import { wait } from './wait'
+import * as core from '@actions/core';
+import { getOctokit, context } from '@actions/github';
+import { PayloadRepository } from '@actions/github/lib/interfaces';
 
 /**
  * The main function for the action.
@@ -7,20 +8,50 @@ import { wait } from './wait'
  */
 export async function run(): Promise<void> {
   try {
-    const ms: string = core.getInput('milliseconds')
+    const { graphql } = getOctokit(
+      core.getInput('github-token', { required: true })
+    );
 
-    // Debug logs are only output if the `ACTIONS_STEP_DEBUG` secret is true
-    core.debug(`Waiting ${ms} milliseconds ...`)
+    const response = await graphql<PayloadRepository>(
+      `
+        query ($owner: String!, $name: String!, $number: Int!) {
+          repository(owner: $owner, name: $name) {
+            pullRequest(number: $number) {
+              id
+              closingIssuesReferences(first: 10) {
+                nodes {
+                  number
+                  title
+                }
+              }
+            }
+          }
+        }
+      `,
+      {
+        owner: context.repo.owner,
+        name: context.repo.repo,
+        number: context.issue.number
+      }
+    );
 
-    // Log the current timestamp, wait, then log the new timestamp
-    core.debug(new Date().toTimeString())
-    await wait(parseInt(ms, 10))
-    core.debug(new Date().toTimeString())
+    const issues = response.repository.pullRequest.closingIssuesReferences
+      .nodes as {
+      number: number;
+      title: string;
+    }[];
 
-    // Set outputs for other workflow steps to use
-    core.setOutput('time', new Date().toTimeString())
+    core.startGroup('Issues to close');
+
+    for (const issue of issues) {
+      core.info(`#${issue.number} ${issue.title}`);
+    }
+
+    core.endGroup();
+
+    core.setOutput('issues', JSON.stringify(issues));
   } catch (error) {
     // Fail the workflow run if an error occurs
-    if (error instanceof Error) core.setFailed(error.message)
+    if (error instanceof Error) core.setFailed(error.message);
   }
 }

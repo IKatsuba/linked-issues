@@ -1,6 +1,7 @@
-name: 'The name of your action here'
-description: 'Provide a description here'
-author: 'Your name or organization here'
+name: 'Pull Request Linker'
+description:
+  'This action will find all issues linked to the current pull request.'
+author: 'Igor Katsuba'
 
 # Add your action's branding here. This will appear on the GitHub Marketplace.
 branding:
@@ -8,16 +9,16 @@ branding:
   color: 'red'
 
 # Define your inputs here.
-inputs:
-  milliseconds:
-    description: 'Your input description here'
-    required: true
-    default: '1000'
+# inputs:
+#   milliseconds:
+#     description: 'Your input description here'
+#     required: true
+#     default: '1000'
 
 # Define your outputs here.
 outputs:
-  time:
-    description: 'Your output description here'
+  issues:
+    description: 'Issues linked to the current pull request'
 
 runs:
   using: node20
